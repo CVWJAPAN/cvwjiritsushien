@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>自立支援AI - 全記録保存版</title>
+  <style>
+    body { font-family: sans-serif; background: #fff; color: #000; padding: 20px; }
+    h1 { font-size: 1.6em; color: #333; }
+    .chatbox { border: 2px solid #0ff; border-radius: 10px; background: #f0faff; padding: 15px; }
+    .options button, .mode-btn {
+      width: 100%; margin: 5px 0; padding: 12px; font-weight: bold;
+      background: #00ffff; border: none; border-radius: 6px;
+    }
+    .response, .record, .log, .month-log {
+      margin-top: 10px; padding: 10px; background: #e0ffff;
+      border-left: 5px solid #0ff; white-space: pre-wrap;
+    }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h1>CVW 自立支援サポートAI（全記録保存対応版）</h1>
+
+  <button class="mode-btn" onclick="toggleMode()">【支援者モード：OFF】</button>
+  <button class="mode-btn hidden" onclick="downloadLog()">JSON形式で記録ダウンロード</button>
+  <button class="mode-btn hidden" onclick="showMonthReport()">月ごとの相談レポートを表示</button>
+
+  <div class="chatbox">
+    <p>いま困っていることを選んでください。</p>
+    <div class="options">
+      <button onclick="addDialogue('住まい・お金')">住まい・お金</button>
+      <button onclick="addDialogue('家族との関係')">家族との関係</button>
+      <button onclick="addDialogue('病気・障がい・孤独')">病気・障がい・孤独</button>
+      <button onclick="addDialogue('学校・社会との断絶')">学校・社会との断絶</button>
+    </div>
+
+    <div id="responseArea" class="response"></div>
+    <div id="dialogueLog" class="record hidden"></div>
+    <div id="monthReport" class="month-log hidden"></div>
+  </div>
+
+  <script>
+    let fullLog = [];
+    let supportMode = false;
+
+    const responseTemplates = {
+      "住まい・お金": "【支援提案】生活困窮者自立支援、住居確保給付金、生活保護などが対象になります。",
+      "家族との関係": "【支援提案】家庭児童相談室、189（虐待相談）、自立援助ホームなどが選択肢です。",
+      "病気・障がい・孤独": "【支援提案】発達支援センター、障がい者就労支援、ピアカウンセリングの利用が可能です。",
+      "学校・社会との断絶": "【支援提案】若者サポートステーション、フリースクール、就労準備支援が考えられます。"
+    };
+
+    function toggleMode() {
+      supportMode = !supportMode;
+      document.querySelector(".mode-btn").textContent = supportMode ? "【支援者モード：ON】" : "【支援者モード：OFF】";
+      document.querySelectorAll(".mode-btn")[1].classList.toggle("hidden", !supportMode);
+      document.querySelectorAll(".mode-btn")[2].classList.toggle("hidden", !supportMode);
+      document.getElementById("dialogueLog").classList.toggle("hidden", !supportMode);
+    }
+
+    function addDialogue(userMessage) {
+      const aiResponse = responseTemplates[userMessage];
+      const time = new Date();
+      const timestamp = time.toLocaleString("ja-JP");
+      const monthKey = time.getFullYear() + "-" + String(time.getMonth() + 1).padStart(2, "0");
+
+      const record = {
+        time: timestamp,
+        user: userMessage,
+        ai: aiResponse,
+        month: monthKey
+      };
+
+      fullLog.push(record);
+
+      document.getElementById("responseArea").innerText = `【あなた】\n${userMessage}\n\n【AI】\n${aiResponse}`;
+      updateDialogueLog();
+    }
+
+    function updateDialogueLog() {
+      const text = fullLog.map(log => `【${log.time}】\nあなた：${log.user}\nAI：${log.ai}`).join("\n\n");
+      document.getElementById("dialogueLog").innerText = text;
+    }
+
+    function downloadLog() {
+      const blob = new Blob([JSON.stringify(fullLog, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "相談記録.json";
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function showMonthReport() {
+      const monthly = {};
+      fullLog.forEach(log => {
+        if (!monthly[log.month]) monthly[log.month] = [];
+        monthly[log.month].push(log.user);
+      });
+
+      let report = "【月別相談レポート】\n";
+      for (const month in monthly) {
+        report += `\n${month}：${monthly[month].length} 件\n内訳：${monthly[month].join(", ")}\n`;
+      }
+
+      document.getElementById("monthReport").innerText = report;
+      document.getElementById("monthReport").classList.remove("hidden");
+    }
+  </script>
+</body>
+</html>
